@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>White Noise Palette</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Caprasimo&family=Noto+Sans+KR:wght@100..900&display=swap" rel="stylesheet">
+
+<style>
+  :root{--c1:#8FB79A;--c2:#5E8C6D;--c3:#3E5F49;--c4:#243B2B;--gap:14px}
+  body{
+    margin:0;min-height:100vh;display:flex;flex-direction:column;gap:12px;
+    align-items:center;justify-content:center;background:url('background.jpg') center/cover no-repeat;
+    font-family:system-ui,"Noto Sans KR",sans-serif;color:#555
+  }
+
+  h1{
+    margin:0;
+    font-size:40px;         
+    font-family:"Black Han Sans","Noto Sans KR",system-ui,sans-serif;
+    letter-spacing:0.5px;
+  }
+ 
+  .desc{margin:0 0 8px 0;font-size:18px;color:#666;text-align:center}
+
+  .frame{display:flex;gap:var(--gap);background:#fff;border-radius:20px;padding:24px;}
+
+  .main{position:relative;border-radius:16px;overflow:hidden}
+  .main img{display:block;max-width:100%;height:auto;border-radius:16px}
+
+  .stack{display:flex;flex-direction:column;gap:var(--gap)}
+  .tile{
+    flex:1; aspect-ratio:1/1; border-radius:16px; position:relative;
+    display:flex;align-items:center;justify-content:center; font-weight:700;font-size:18px; color:#fff;
+  }
+  .t1{background:var(--c1)} .t2{background:var(--c2)} .t3{background:var(--c3)} .t4{background:var(--c4)}
+
+  /* 컨트롤: 호버 시에만 표시 */
+  .controls{
+    position:absolute;left:10px;right:10px;bottom:10px;background:rgba(0,0,0,.72);
+    padding:8px;border-radius:10px;display:flex;gap:8px;align-items:center;opacity:0;transition:.18s
+  }
+  .tile:hover .controls, .main:hover .controls {opacity:1}
+
+  .btn{border:0;background:#333;color:#fff;padding:4px 10px;border-radius:6px;cursor:pointer}
+  input[type="range"]{flex:1}
+</style>
+</head>
+<body>
+  <h1>White Noise Palette</h1>
+  <p class="desc">여러가지 소리를 조합해 나만의 백색소음을 만들어 보세요!</p>
+
+  <div class="frame">
+    <!-- (가) 메인 -->
+    <section class="main" id="main">
+      <img id="mainImg" src="forest.jpg" alt="Main forest">
+      <div class="controls" id="c-main">
+        <button class="btn" data-k="main">▶</button>
+        <input type="range" min="0" max="100" value="70" data-v="main">
+      </div>
+    </section>
+
+    <!-- (나)~(마) -->
+    <aside class="stack" id="stack">
+      <div class="tile t1" id="rain">Rain
+        <div class="controls" id="c-rain">
+          <button class="btn" data-k="rain">▶</button>
+          <input type="range" min="0" max="100" value="60" data-v="rain">
+        </div>
+      </div>
+
+      <div class="tile t2" id="fireplace">Fireplace
+        <div class="controls" id="c-fireplace">
+          <button class="btn" data-k="fireplace">▶</button>
+          <input type="range" min="0" max="100" value="55" data-v="fireplace">
+        </div>
+      </div>
+
+      <div class="tile t3" id="thunder">Thunder
+        <div class="controls" id="c-thunder">
+          <button class="btn" data-k="thunder">▶</button>
+          <input type="range" min="0" max="100" value="50" data-v="thunder">
+        </div>
+      </div>
+
+      <div class="tile t4" id="cricket">Cricket
+        <div class="controls" id="c-cricket">
+          <button class="btn" data-k="cricket">▶</button>
+          <input type="range" min="0" max="100" value="50" data-v="cricket">
+        </div>
+      </div>
+    </aside>
+  </div>
+
+<script>
+  const FILES = {
+    main:      'main.mp3',
+    rain:      'rain.mp3',
+    fireplace: 'fireplace.mp3',
+    thunder:   'thunder.mp3',
+    cricket:   'cricket.mp3'
+  };
+
+  const players = {};  
+  const states  = {};   
+
+  function ensure(key, vol){
+    if (players[key]) return players[key];
+    const a = new Audio(FILES[key]);
+    a.loop = true;
+    a.preload = 'auto';
+    a.volume = (vol ?? 70) / 100; // 기본값 0.7
+    players[key] = a;
+    return a;
+  }
+
+  function wire(tileId, ctrlId, key){
+    const tile = document.getElementById(tileId);
+    const ctrl = document.getElementById(ctrlId);
+    const btn  = ctrl.querySelector(`[data-k="${key}"]`);
+    const vol  = ctrl.querySelector(`[data-v="${key}"]`);
+
+    tile.addEventListener('click', (e)=>{
+      if(e.target.closest('.controls')) return;
+      toggle();
+    });
+
+    btn.addEventListener('click', (e)=>{ e.stopPropagation(); toggle(); });
+    vol.addEventListener('input', (e)=>{
+      const a = ensure(key, +vol.value);
+      a.volume = (+e.target.value) / 100;
+    });
+
+    function toggle(){
+      const a = ensure(key, +vol.value);
+      if(states[key]){
+        a.pause();
+        states[key] = false;
+        btn.textContent = '▶';
+      }else{
+        a.play().then(()=>{
+          states[key] = true;
+          btn.textContent = '⏸';
+        }).catch(err=>{
+          console.warn('재생 실패:', err);
+        });
+      }
+    }
+  }
+
+  wire('main','c-main','main');
+  wire('rain','c-rain','rain');
+  wire('fireplace','c-fireplace','fireplace');
+  wire('thunder','c-thunder','thunder');
+  wire('cricket','c-cricket','cricket');
+
+  const GAP = 14;
+  const mainImg = document.getElementById('mainImg');
+  const stack   = document.getElementById('stack');
+
+  function fitStackWidth(){
+    const h = mainImg.getBoundingClientRect().height;
+    if(!h) return;
+    const w = (h - 3*GAP) / 4;
+    stack.style.width = `${w}px`;
+  }
+  if (mainImg.complete) fitStackWidth();
+  mainImg.addEventListener('load', fitStackWidth);
+  window.addEventListener('resize', fitStackWidth);
+</script>
+</body>
+</html>
